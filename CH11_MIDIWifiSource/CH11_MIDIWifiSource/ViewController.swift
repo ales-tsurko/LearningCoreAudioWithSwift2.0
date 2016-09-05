@@ -70,10 +70,10 @@ class ViewController: UIViewController {
     }
     
     func sendStatus(status: UInt8, data1: UInt8, data2: UInt8) {
-        var packet = MIDIPacket()
         var packetList = MIDIPacketList()
         let data = [status, data1, data2]
-        MIDIPacketListAdd(&packetList, sizeof(packetList.dynamicType), &packet, 0, data.count, data)
+        let firstPacket = MIDIPacketListInit(&packetList)
+        MIDIPacketListAdd(&packetList, sizeof(packetList.dynamicType), firstPacket, 0, data.count, data)
         
         CheckError(MIDISend(outputPort, destinationEndpoint, &packetList),
             operation: "Couldn't send MIDI packet list")
