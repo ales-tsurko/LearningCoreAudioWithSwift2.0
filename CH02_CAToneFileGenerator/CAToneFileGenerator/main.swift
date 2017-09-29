@@ -3,8 +3,8 @@
 //  CAToneFileGenerator
 //
 //  Created by Ales Tsurko on 25.08.15.
+//  Edited by Dima Gimburg on 28.09.17.
 //
-
 import Foundation
 import AudioToolbox
 
@@ -13,8 +13,8 @@ let DURATION = 5.0
 let FILENAME_FORMAT = "%0.3f-sine.aif"
 
 func main() {
-    let argc = Process.argc
-    let argv = Process.arguments
+    let argc = CommandLine.argc
+    let argv = CommandLine.arguments
     
     guard argc > 1 else {
         print("Usage: CAToneFileGenerator n\n(where n is tone in Hz)")
@@ -22,14 +22,14 @@ func main() {
     }
     
     let hz = Double(argv[1])
-   
-    assert(hz > 0)
+    
+    assert(hz! > 0.0)
     
     print("generating \(hz!) hz tone")
     
     let fileName = String(format: FILENAME_FORMAT, hz!)
-    let filePath = (NSFileManager.defaultManager().currentDirectoryPath as NSString).stringByAppendingPathComponent(fileName)
-    let fileURL: CFURLRef = NSURL.fileURLWithPath(filePath)
+    let filePath = (FileManager.default.currentDirectoryPath as NSString).appendingPathComponent(fileName)
+    let fileURL: CFURL = NSURL.fileURL(withPath: filePath) as CFURL
     
     // Prepare for format
     var asbd = AudioStreamBasicDescription()
@@ -43,10 +43,12 @@ func main() {
     asbd.mBytesPerPacket = asbd.mFramesPerPacket * asbd.mBytesPerFrame
     
     // Set up the file
-    var audioFile: AudioFileID = nil
+    var _audioFile: AudioFileID? = nil
     var audioErr = noErr
     
-    audioErr = AudioFileCreateWithURL(fileURL, kAudioFileAIFFType, &asbd, AudioFileFlags.EraseFile, &audioFile)
+    audioErr = AudioFileCreateWithURL(fileURL, kAudioFileAIFFType, &asbd, AudioFileFlags.eraseFile, &_audioFile)
+    
+    guard let audioFile = _audioFile else { return }
     
     assert(audioErr == noErr)
     
@@ -59,18 +61,18 @@ func main() {
     while sampleCount < maxSampleCount {
         for n in 0..<Int(wavelengthInSamples) {
             // Square wave
-//            var sample = n < Int(wavelengthInSamples) / 2 ? (Int16.max).bigEndian : (Int16.min).bigEndian
+            //            var sample = n < Int(wavelengthInSamples) / 2 ? (Int16.max).bigEndian : (Int16.min).bigEndian
             
             // Saw wave
-//            var sample = Int16(((Double(n) / wavelengthInSamples) * Double(Int16.max) * 2) - Double(Int16.max)).bigEndian
+            //            var sample = Int16(((Double(n) / wavelengthInSamples) * Double(Int16.max) * 2) - Double(Int16.max)).bigEndian
             
             // Sine wave
-            var sample = Int16(Double(Int16.max) * sin(2 * M_PI * (Double(n) / wavelengthInSamples))).bigEndian
+            var sample = Int16(Double(Int16.max) * sin(2 * .pi * (Double(n) / wavelengthInSamples))).bigEndian
             
             audioErr = AudioFileWriteBytes(audioFile, false, Int64(sampleCount*2), &bytesToWrite, &sample)
             
             assert(audioErr == noErr)
-            sampleCount++
+            sampleCount += 1
         }
     }
     
